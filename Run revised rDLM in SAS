@@ -1,0 +1,8 @@
+filename rDLM '/path/rDLM Macro.sas';
+
+%include rDLM;
+title;
+%rDLM(data, exposure, 'Corr(Cortisol, Latent Profile)',outcome, 
+           week, subject,
+           %str(),
+           %str(NHW+smoking+gest_age2+delivery2+SGA+steroids), with_u=1); 
