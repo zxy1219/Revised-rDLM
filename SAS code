@@ -1,0 +1,259 @@
+SAS code of the revised rDLM
+******************************************************************************************************;
+*** Reverse DLM code adapted from the SAS code published in Gennings 2020 Environmental Research.     *
+*** Changes from the version of Gennings 2020 Environmental Research:                                 *
+***    1. Added interaction. "inter" is an effect modifier coded as 0 or 1.                           *
+***    2. Removed the plot function due to the incompatibility in different SAS versions;  rDLM figures presented in this manuscript were generated using R. R code is available by contacting xueying.zhang@mssm.edu *
+******************************************************************************************************;
+
+%macro rDLM(data, chemconc, label, y, timevar, ID,
+                 covinitial, covlincomb, inter, 
+                 with_u=1, rug=-1, numcomparisons=9, 
+                 timelabel='Time Since Birth (weeks)', _alpha_=0.05);
+
+******************************************************************************************************;
+*** reverse DLM with truncated power function
+	assumes knots at _k1_, _k2_, _k3_ and _k4_ and
+	        prespecified locations for Holms-Bonferroni confidence intervals in variable confint_time
+		    at numcomparisons locations;
+******************************************************************************************************;
+proc sort data=&data; by &id;run;
+** to get starting values;
+*ods listing close;
+proc nlin data=&data outest=betas;
+ parms a0=.1 a1=0 a2=0 a3=0 a_1=0 a_2=0 a_3=0 a_4=0
+        g0=.1 g1=0 g2=0 g3=0 
+        th1=0  th2=0 th3=0 th4=0
+        h0=.1 h1=0 h2=0 h3=0 
+        in1=0  in2=0 in3=0 in4=0
+         &covinitial;
+   time = &timevar;;
+   beta0 = a0 + a1*time + a2*time**2 + a3*time**3 + 
+           a_1*(time>_k1_)*(time-_k1_)**3 + a_2*(time>_k2_)*(time-_k2_)**3 + a_3*(time>_k3_)*(time-_k3_)**3
+            + a_4*(time>_k4_)*(time-_k4_)**3 ;; 
+   beta1 = g0 + g1*time + g2*time**2 + g3*time**3 + 
+           th1*(time>_k1_)*(time-_k1_)**3 + th2*(time>_k2_)*(time-_k2_)**3 + th3*(time>_k3_)*(time-_k3_)**3
+            + th4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta2 = h0 + h1*time + h2*time**2 + h3*time**3 + 
+           in1*(time>_k1_)*(time-_k1_)**3 + in2*(time>_k2_)*(time-_k2_)**3 + in3*(time>_k3_)*(time-_k3_)**3
+            + in4*(time>_k4_)*(time-_k4_)**3 ;;
+   y = &y;;
+   inter =&inter;;
+   mu = beta0+beta1*y +beta2*y*inter + &covlincomb;;
+   model &chemconc =mu;;
+run;
+*ods listing;
+data start; 
+set betas; where _type_='FINAL'; 
+   drop _iter_ _type_ _status_ _name_ _sse_;
+run;
+*For inter=0;
+proc nlmixed data=&data;
+   parms /data=start; 
+   time = &timevar;
+   beta0 = a0 + a1*time + a2*time**2 + a3*time**3 + 
+           a_1*(time>_k1_)*(time-_k1_)**3 + a_2*(time>_k2_)*(time-_k2_)**3 + a_3*(time>_k3_)*(time-_k3_)**3
+            + a_4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta1 = g0 + g1*time + g2*time**2 + g3*time**3 + 
+           th1*(time>_k1_)*(time-_k1_)**3 + th2*(time>_k2_)*(time-_k2_)**3 + th3*(time>_k3_)*(time-_k3_)**3
+            + th4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta2 = h0 + h1*time + h2*time**2 + h3*time**3 + 
+           in1*(time>_k1_)*(time-_k1_)**3 + in2*(time>_k2_)*(time-_k2_)**3 + in3*(time>_k3_)*(time-_k3_)**3
+            + in4*(time>_k4_)*(time-_k4_)**3 ;;
+   y = &y; 
+   inter = &inter;
+   id beta1 ;
+   %if &with_u=0 %then %do; mu = beta0+beta1*y+beta2*y*inter + &covlincomb; %end;
+   %if &with_u=1 %then %do; mu = beta0+beta1*y+beta2*y*inter+u + &covlincomb; 
+                            random u ~ normal(0,s2u) subject=&id; %end;
+   model &chemconc ~normal(mu, sigsq);
+   predict beta1 out=pred_in0 alpha=&_alpha_; 
+   predict mu out=predmu ;
+run;
+
+*For inter=1;
+proc nlmixed data=&data;
+   parms /data=start; 
+   time = &timevar;
+   beta0 = a0 + a1*time + a2*time**2 + a3*time**3 + 
+           a_1*(time>_k1_)*(time-_k1_)**3 + a_2*(time>_k2_)*(time-_k2_)**3 + a_3*(time>_k3_)*(time-_k3_)**3
+            + a_4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta1 = g0 + g1*time + g2*time**2 + g3*time**3 + 
+           th1*(time>_k1_)*(time-_k1_)**3 + th2*(time>_k2_)*(time-_k2_)**3 + th3*(time>_k3_)*(time-_k3_)**3
+            + th4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta2 = h0 + h1*time + h2*time**2 + h3*time**3 + 
+           in1*(time>_k1_)*(time-_k1_)**3 + in2*(time>_k2_)*(time-_k2_)**3 + in3*(time>_k3_)*(time-_k3_)**3
+            + in4*(time>_k4_)*(time-_k4_)**3 ;;
+   y = &y; 
+   inter = &inter;
+   id beta2 ;
+   %if &with_u=0 %then %do; mu = beta0+beta1*y+beta2*y*inter + &covlincomb; %end;
+   %if &with_u=1 %then %do; mu = beta0+beta1*y+beta2*y*inter +u + &covlincomb; 
+                            random u ~ normal(0,s2u) subject=&id; %end;
+   model &chemconc ~normal(mu, sigsq);
+   predict beta1+beta2 out=pred_in1 alpha=&_alpha_; 
+   predict mu out=predmu ;
+run;
+
+*The difference of (inter=1 - inter=0);
+proc nlmixed data=&data;
+   parms /data=start; 
+   time = &timevar;
+   beta0 = a0 + a1*time + a2*time**2 + a3*time**3 + 
+           a_1*(time>_k1_)*(time-_k1_)**3 + a_2*(time>_k2_)*(time-_k2_)**3 + a_3*(time>_k3_)*(time-_k3_)**3
+            + a_4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta1 = g0 + g1*time + g2*time**2 + g3*time**3 + 
+           th1*(time>_k1_)*(time-_k1_)**3 + th2*(time>_k2_)*(time-_k2_)**3 + th3*(time>_k3_)*(time-_k3_)**3
+            + th4*(time>_k4_)*(time-_k4_)**3 ;;
+   beta2 = h0 + h1*time + h2*time**2 + h3*time**3 + 
+           in1*(time>_k1_)*(time-_k1_)**3 + in2*(time>_k2_)*(time-_k2_)**3 + in3*(time>_k3_)*(time-_k3_)**3
+            + in4*(time>_k4_)*(time-_k4_)**3 ;;
+   y = &y; 
+   inter = &inter;
+   id beta2 ;
+   %if &with_u=0 %then %do; mu = beta0+beta1*y+beta2*y*inter + &covlincomb; %end;
+   %if &with_u=1 %then %do; mu = beta0+beta1*y+beta2*y*inter +u + &covlincomb; 
+                            random u ~ normal(0,s2u) subject=&id; %end;
+   model &chemconc ~normal(mu, sigsq);
+   predict beta2 out=pred_indif alpha=&_alpha_; 
+   predict mu out=predmu ;
+run;
+
+
+*****************************************************;
+**** creating Holms-Bonferroni confidence intervals;
+*****************************************************;
+*For inter=0;
+proc sort data=pred_in0; by &timevar;run;
+data confint_in0;
+   set pred_in0;
+   if confint_time ne .;
+run;
+proc sort data=confint_in0; by tvalue;run;
+data confint_in0;
+   set confint_in0; by tvalue;
+   if first.tvalue;
+   tvaluesq= tvalue*tvalue;
+run;
+proc sort data=confint_in0; by confint_time descending tvaluesq ;run;
+data confint2_in0;
+   set confint_in0;
+   by confint_time descending tvaluesq;
+   if first.confint_time;
+   alpha=&_alpha_;
+proc sort; by descending tvaluesq;run;
+data confint3_in0;
+   set confint2_in0;
+   m=_n_;
+   numcomparisons = &numcomparisons;
+   crit = tinv(1-&_alpha_/2, df);
+   conf_coeff = 1-&_alpha_/(2*(numcomparisons - _n_ +1));
+   HOLMSlow = pred - tinv(conf_coeff,df) * stderrpred;
+   HOLMSup =  pred + tinv(conf_coeff,df) * stderrpred;
+   HOLMS = HOLMSlow; output;
+   HOLMS = HOLMSup; output;
+   keep confint_time crit conf_coeff tvalue tvaluesq lower upper HOLMSlow HOLMSup pred stderrpred
+        holms m  df;
+run;
+       
+*For inter=1;
+proc sort data=pred_in1; by &timevar;run;
+data confint_in1;
+   set pred_in1;
+   if confint_time ne .;
+run;
+proc sort data=confint_in1; by tvalue;run;
+data confint_in1;
+   set confint_in1; by tvalue;
+   if first.tvalue;
+   tvaluesq= tvalue*tvalue;
+run;
+proc sort data=confint_in1; by confint_time descending tvaluesq ;run;
+data confint2_in1;
+   set confint_in1;
+   by confint_time descending tvaluesq;
+   if first.confint_time;
+   alpha=&_alpha_;
+proc sort; by descending tvaluesq;run;
+data confint3_in1;
+   set confint2_in1;
+   m=_n_;
+   numcomparisons = &numcomparisons;
+   crit = tinv(1-&_alpha_/2, df);
+   conf_coeff = 1-&_alpha_/(2*(numcomparisons - _n_ +1));
+   HOLMSlow = pred - tinv(conf_coeff,df) * stderrpred;
+   HOLMSup =  pred + tinv(conf_coeff,df) * stderrpred;
+   HOLMS = HOLMSlow; output;
+   HOLMS = HOLMSup; output;
+   keep confint_time crit conf_coeff tvalue tvaluesq lower upper HOLMSlow HOLMSup pred stderrpred
+        holms m  df;
+run;   
+    
+*For the difference between inter=1 and inter=0;
+proc sort data=pred_indif; by &timevar;run;
+data confint_indif;
+   set pred_indif;
+   if confint_time ne .;
+run;
+proc sort data=confint_indif; by tvalue;run;
+data confint_indif;
+   set confint_indif; by tvalue;
+   if first.tvalue;
+   tvaluesq= tvalue*tvalue;
+run;
+proc sort data=confint_indif; by confint_time descending tvaluesq ;run;
+data confint2_indif;
+   set confint_indif;
+   by confint_time descending tvaluesq;
+   if first.confint_time;
+   alpha=&_alpha_;
+proc sort; by descending tvaluesq;run;
+data confint3_indif;
+   set confint2_indif;
+   m=_n_;
+   numcomparisons = &numcomparisons;
+   crit = tinv(1-&_alpha_/2, df);
+   conf_coeff = 1-&_alpha_/(2*(numcomparisons - _n_ +1));
+   HOLMSlow = pred - tinv(conf_coeff,df) * stderrpred;
+   HOLMSup =  pred + tinv(conf_coeff,df) * stderrpred;
+   HOLMS = HOLMSlow; output;
+   HOLMS = HOLMSup; output;
+   keep confint_time crit conf_coeff tvalue tvaluesq lower upper HOLMSlow HOLMSup pred stderrpred
+        holms m  df;
+run;
+        
+*For inter=0;
+data pred_in0;
+   set pred_in0; 
+   refbar=0;
+   rug= &rug;
+
+data pred_in0;
+   set pred_in0 confint3_in0;
+proc sort data=pred_in0; by &timevar;
+quit;
+
+*For inter=1;
+data pred_in1;
+   set pred_in1; 
+   refbar=0;
+   rug= &rug;
+
+data pred_in1;
+   set pred_in1 confint3_in1;
+proc sort data=pred_in1; by &timevar;
+quit;
+
+*For the difference between inter=1 and inter=0;
+data pred_indif;
+   set pred_indif; 
+   refbar=0;
+   rug= &rug;
+
+data pred_indif;
+   set pred_indif confint3_indif;
+proc sort data=pred_indif; by &timevar;
+quit;
+
+%mend;
+*********End of code;
