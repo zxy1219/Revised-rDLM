@@ -2,7 +2,22 @@ filename rDLM '/path/rDLM Macro.sas';
 
 %include rDLM;
 title;
-%rDLM(data, exposure, 'Corr(Cortisol, Latent Profile)',outcome, 
-           week, subject,
-           %str(),
-           %str(NHW+smoking+gest_age2+delivery2+SGA+steroids), with_u=1); 
+%rDLM(data, exposure, 'label',outcome, 
+      time, subject, %str(),
+      %str(covariates), inter, with_u=1); 
+      
+#Save output files (PRED_in0,PRED_in1,PRED_indif) to permenant files (e.g., xzhang) for plotting in R;
+#PRED_in0 is the result for effect modifer =0;
+#PRED_in1 is the result for effect modifer =1;
+#PRED_indif is the result for the difference between effect modifer (1 - 0), it is the coefficient of the interaction term in model;
+
+data xzhang.PRED_attent0;
+set PRED_in0;
+run;  
+data xzhang.PRED_attent1;
+set PRED_in1;
+run;  
+data xzhang.PRED_attentdif;
+set PRED_indif;
+run;
+
