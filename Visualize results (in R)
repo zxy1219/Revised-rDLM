@@ -1,0 +1,82 @@
+library(haven)
+library(ggplot2)
+
+#Read the outputs from the SAS code
+habit <- read_sas("H:/SASUniversity/myfolders/pred_habitdif.sas7bdat")
+habit0 <- read_sas("H:/SASUniversity/myfolders/pred_habit0.sas7bdat")
+habit1 <- read_sas("H:/SASUniversity/myfolders/pred_habit1.sas7bdat")
+
+#Habituation
+#The followingexample only included data with specific time points (PMA_w_sal >30 and <=38);
+
+dat.cur <- subset(habit, habit$PMA_w_sal>=30 &habit$PMA_w_sal <=38)
+phabit <- ggplot(data =dat.cur,aes(x=PMA_w_sal, y=Pred))+
+  geom_ribbon(data =dat.cur,
+              aes(x=PMA_w_sal,ymin=Lower, ymax=Upper),fill ="gray13", linetype=2, alpha=0.4)+ 
+  geom_line(aes(x=PMA_w_sal, y=Pred),
+            alpha=1,  size=2, color = "gray8",se = FALSE,show.legend =TRUE)+
+  geom_errorbar(data=habit,mapping=aes(x=confint_time,ymin=HOLMSlow, ymax=HOLMSup),width=0.2) +
+  geom_hline(yintercept =0,linetype=2)+
+  scale_x_continuous(name="PMA", breaks=c(30,31,32,33,34,35,36,37,38)) +
+  ylab("Coefficient")+
+  labs(title = '')+
+  theme(legend.text=element_text(size=10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.line= element_line(color='gainsboro'),
+        axis.text.x = element_text(size=10),
+        plot.title = element_text(family = 'Helvetica', 
+                                  color = 'black', 
+                                  face = 'bold', 
+                                  size = 15, 
+                                  hjust = 0))
+
+dat.cur0 <- subset(habit0, habit0$PMA_w_sal>=30 & habit0$PMA_w_sal <=38)
+phabit0 <- ggplot(data =dat.cur0,aes(x=PMA_w_sal, y=Pred))+
+  geom_ribbon(data =dat.cur0,
+              aes(x=PMA_w_sal,ymin=Lower, ymax=Upper),fill ="lightpink4", linetype=2, alpha=0.4)+ 
+  geom_line(aes(x=PMA_w_sal, y=Pred),
+            alpha=1,  size=2, color = "deeppink",se = FALSE,show.legend =TRUE)+
+  geom_errorbar(data=habit0,mapping=aes(x=confint_time,ymin=HOLMSlow, ymax=HOLMSup),width=0.2) +
+  geom_hline(yintercept =0,linetype=2)+
+  scale_x_continuous(name="PMA", breaks=c(30,31,32,33,34,35,36,37,38)) +
+  ylab("Coefficient")+
+  labs(title = 'Habituation')+
+  theme(legend.text=element_text(size=10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.line= element_line(color='gainsboro'),
+        axis.text.x = element_text(size=10),
+        plot.title = element_text(family = 'Helvetica', 
+                                  color = 'black', 
+                                  face = 'bold', 
+                                  size = 15, 
+                                  hjust = 0))
+
+dat.cur1 <- subset(habit1, habit1$PMA_w_sal>=30 & habit1$PMA_w_sal <=38)
+phabit1 <- ggplot(data =dat.cur1,aes(x=PMA_w_sal, y=Pred))+
+  geom_ribbon(data =dat.cur1,
+              aes(x=PMA_w_sal,ymin=Lower, ymax=Upper),fill ="lightsteelblue4", linetype=2, alpha=0.4)+ 
+  geom_line(data =dat.cur1,aes(x=PMA_w_sal, y=Pred),
+            alpha=1,  size=2, color = "dodgerblue3",se = FALSE,show.legend =TRUE)+
+  geom_errorbar(data=habit1,mapping=aes(x=confint_time,ymin=HOLMSlow, ymax=HOLMSup),width=0.2) +
+  geom_hline(yintercept =0,linetype=2)+
+  scale_x_continuous(name="PMA", breaks=c(30,31,32,33,34,35,36,37,38)) +
+  ylab("Coefficient")+
+  labs(title = ' ')+
+  theme(legend.text=element_text(size=10),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.line= element_line(color='gainsboro'),
+        axis.text.x = element_text(size=10),
+        plot.title = element_text(family = 'Helvetica', 
+                                  color = 'black', 
+                                  face = 'bold', 
+                                  size = 15, 
+                                  hjust = 0))
